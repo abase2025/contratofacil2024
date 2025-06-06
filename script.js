@@ -1055,8 +1055,15 @@ function exportarPDF() {
             y += 6;
         }
         
-        // Adicionar assinaturas visuais ao PDF
-        y = adicionarAssinaturasAoPDF(doc, y);
+        // Adicionar assinaturas visuais ao PDF APENAS se existirem assinaturas válidas
+        const assinLocador = assinaturaLocador || JSON.parse(localStorage.getItem('assinatura_locador') || 'null');
+        const assinLocatario = assinaturaLocatario || JSON.parse(localStorage.getItem('assinatura_locatario') || 'null');
+        
+        // Só adicionar seção de assinaturas se houver pelo menos uma assinatura válida
+        if ((assinLocador && assinLocador.data && !assinLocador.data.includes('%P')) || 
+            (assinLocatario && assinLocatario.data && !assinLocatario.data.includes('%P'))) {
+            y = adicionarAssinaturasAoPDF(doc, y);
+        }
         
         // Salvar o PDF
         const nomeArquivo = tipoContratoAtual === 'imovel' ? 'contrato_locacao_imovel.pdf' : 'contrato_locacao_veiculo.pdf';
@@ -2401,7 +2408,13 @@ function adicionarAssinaturaAoContrato(textoContrato) {
     const assinLocador = assinaturaLocador || JSON.parse(localStorage.getItem('assinatura_locador') || 'null');
     const assinLocatario = assinaturaLocatario || JSON.parse(localStorage.getItem('assinatura_locatario') || 'null');
     
-    if (!assinLocador && !assinLocatario) return textoContrato;
+    // Só adicionar seção de assinaturas se houver pelo menos uma assinatura válida
+    const temAssinaturaValidaLocador = assinLocador && assinLocador.data && !assinLocador.data.includes('%P');
+    const temAssinaturaValidaLocatario = assinLocatario && assinLocatario.data && !assinLocatario.data.includes('%P');
+    
+    if (!temAssinaturaValidaLocador && !temAssinaturaValidaLocatario) {
+        return textoContrato; // Retorna contrato sem seção de assinaturas
+    }
     
     // Adicionar seção de assinatura ao final do contrato
     let secaoAssinatura = `
@@ -2415,32 +2428,20 @@ Hora: ${new Date().toLocaleTimeString('pt-BR')}
 
 `;
 
-    // Adicionar assinatura do locador se disponível
-    if (assinLocador && assinLocador.data && !assinLocador.data.includes('%P')) {
+    // Adicionar assinatura do locador se disponível e válida
+    if (temAssinaturaValidaLocador) {
         secaoAssinatura += `LOCADOR:
 ____________________________________________
 [ASSINATURA DIGITAL DO LOCADOR APLICADA]
 
 `;
-    } else {
-        secaoAssinatura += `LOCADOR:
-____________________________________________
-[AGUARDANDO ASSINATURA DIGITAL]
-
-`;
     }
 
-    // Adicionar assinatura do locatário se disponível
-    if (assinLocatario && assinLocatario.data && !assinLocatario.data.includes('%P')) {
+    // Adicionar assinatura do locatário se disponível e válida
+    if (temAssinaturaValidaLocatario) {
         secaoAssinatura += `LOCATÁRIO:
 ____________________________________________
 [ASSINATURA DIGITAL DO LOCATÁRIO APLICADA]
-
-`;
-    } else {
-        secaoAssinatura += `LOCATÁRIO:
-____________________________________________
-[AGUARDANDO ASSINATURA DIGITAL]
 
 `;
     }
